@@ -121,14 +121,14 @@ func Increment(num string) int {
 }
 
 func main() {
-	//n := 10
-	//fmt.Printf("FibonacciIterative from %d is %d \n", n, FibonacciIterative(n))
-	//fmt.Printf("FibonacciRecursive from %d is %d \n", n, FibonacciRecursive(n))
-	//fmt.Printf("Number %d is prime %t", n, IsPrime(n))
-	//fmt.Printf("%d is binary palindrome: %t\n", n, IsBinaryPalindrome(n))
+	n := 10
+	fmt.Printf("FibonacciIterative from %d is %d \n", n, FibonacciIterative(n))
+	fmt.Printf("FibonacciRecursive from %d is %d \n", n, FibonacciRecursive(n))
+	fmt.Printf("Number %d is prime %t", n, IsPrime(n))
+	fmt.Printf("%d is binary palindrome: %t\n", n, IsBinaryPalindrome(n))
 
-	//n := "00001010"
-	//fmt.Printf("Increment of %s is %d\n", n, Increment(n))
+	binString := "00001010"
+	fmt.Printf("Increment of %s is %d\n", binString, Increment(binString))
 
 	fmt.Printf("%t\n", ValidParentheses("[{]}"))
 }
