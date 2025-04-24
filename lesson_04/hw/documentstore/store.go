@@ -1,7 +1,7 @@
 package documentstore
 
 type Store struct {
-	Collection map[string]*Collection
+	collection map[string]*Collection
 }
 
 func NewStore() *Store {
@@ -12,23 +12,23 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Col
 	// Створюємо нову колекцію і повертаємо `true` якщо колекція була створена
 	// Якщо ж колекція вже створена то повертаємо `false` та nil
 
-	if _, ok := s.Collection[name]; ok {
+	if _, ok := s.collection[name]; ok {
 		return false, nil
 	}
 
 	newCollection := Collection{
-		Name:             name,
-		Documents:        make(map[string]*Document),
-		CollectionConfig: *cfg,
+		Name:      name,
+		documents: make(map[string]*Document),
+		cfg:       *cfg,
 	}
 
-	s.Collection[name] = &newCollection
+	s.collection[name] = &newCollection
 
 	return true, &newCollection
 }
 
 func (s *Store) GetCollection(name string) (*Collection, bool) {
-	collection, ok := s.Collection[name]
+	collection, ok := s.collection[name]
 
 	if !ok {
 		return nil, false
@@ -38,12 +38,12 @@ func (s *Store) GetCollection(name string) (*Collection, bool) {
 }
 
 func (s *Store) DeleteCollection(name string) bool {
-	_, ok := s.Collection[name]
+	_, ok := s.collection[name]
 	if !ok {
 		return false
 	}
 
-	delete(s.Collection, name)
+	delete(s.collection, name)
 
 	return true
 }
