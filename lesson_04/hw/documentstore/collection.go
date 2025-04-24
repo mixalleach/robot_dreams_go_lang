@@ -19,16 +19,17 @@ func (s *Collection) Put(doc Document) {
 		return
 	}
 
-	if len(key.Value.(string)) == 0 {
-		fmt.Println("Field 'key' is empty")
-		return
-	}
-
 	k, ok := key.Value.(string)
 	if !ok {
 		fmt.Println("Field 'key' is not a string")
 		return
 	}
+
+	if len(k) == 0 {
+		fmt.Println("Field 'key' is empty")
+		return
+	}
+
 	s.documents[k] = &doc
 }
 
