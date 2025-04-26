@@ -23,10 +23,10 @@ func main() {
 	userService.CreateUser("1", "Bob")
 	userService.CreateUser("2", "Ned")
 
-	users, _ := userService.ListUsers()
-	fmt.Printf("Users collection list: %+v\n", users)
+	usersList, _ := userService.ListUsers()
+	fmt.Printf("Users collection list: %+v\n", usersList)
 
 	userService.DeleteUser("1")
-	users2, _ := userService.ListUsers()
-	fmt.Printf("Users collection list: %+v\n", users2)
+	updatedUsersList, _ := userService.ListUsers()
+	fmt.Printf("Users collection list: %+v\n", updatedUsersList)
 }
