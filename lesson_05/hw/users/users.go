@@ -43,7 +43,11 @@ func (s *Service) ListUsers() ([]User, error) {
 	for _, doc := range docs {
 		var user User
 
-		json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
+		errUnmarshal := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
+		if errUnmarshal != nil {
+			return nil, errUnmarshal
+		}
+
 		users = append(users, user)
 	}
 
