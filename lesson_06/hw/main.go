@@ -1,0 +1,47 @@
+package main
+
+import (
+	"fmt"
+	"lesson06/hw/documentstore"
+	"lesson06/hw/users"
+)
+
+func main() {
+	store := documentstore.NewStore()
+
+	userService, err := users.NewService(store)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	_, err = userService.CreateUser("1", "Bob")
+	if err != nil {
+		fmt.Printf("cant create new user")
+	}
+
+	_, err = userService.CreateUser("2", "Ned")
+	if err != nil {
+		fmt.Printf("cant create new user")
+	}
+
+	usersList, _ := userService.ListUsers()
+	fmt.Printf("users collection list: %+v\n", usersList)
+
+	updatedUsersList, _ := userService.ListUsers()
+	fmt.Printf("users collection list: %+v\n", updatedUsersList)
+
+	user, err := userService.GetUser("1")
+	if err != nil {
+		fmt.Printf("cant get user\n")
+	} else {
+		fmt.Printf("user: %+v\n", user)
+	}
+
+	dump, err := store.Dump()
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("dump: %s\n", dump)
+}
