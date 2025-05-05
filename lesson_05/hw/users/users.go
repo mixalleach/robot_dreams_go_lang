@@ -12,40 +12,56 @@ type User struct {
 }
 
 type Service struct {
-	Coll *documentstore.Collection
+	coll *documentstore.Collection
+}
+
+func NewService(store *documentstore.Store) (*Service, error) {
+	usersColl, err := store.CreateCollection(
+		"Users",
+		&documentstore.CollectionConfig{PrimaryKey: "id"},
+	)
+
+	return &Service{coll: usersColl}, err
 }
 
 func (s *Service) CreateUser(userID string, userName string) (*User, error) {
 	doc := User{ID: userID, Name: userName}
-	marshalled, _ := json.Marshal(doc)
 
-	err := s.Coll.Put(
-		documentstore.Document{
-			Fields: map[string]documentstore.DocumentField{
-				"key": {
-					Value: doc.ID,
-				},
-				"value": {
-					Type:  documentstore.DocumentFieldTypeString,
-					Value: marshalled,
-				},
-			},
-		},
-	)
+	marshalled, err := MarshalDocument(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.coll.Put(*marshalled)
 
 	return &doc, err
 }
 
+func (s *Service) GetUser(userID string) (*User, error) {
+	var user User
+	doc, err := s.coll.Get(userID)
+	if err != nil {
+		return nil, errors.New("user '" + userID + "' not found")
+	}
+
+	err = UnmarshalDocument(doc, &user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (s *Service) ListUsers() ([]User, error) {
-	docs := s.Coll.List()
+	docs := s.coll.List()
 	users := make([]User, 0, len(docs))
 
 	for _, doc := range docs {
 		var user User
 
-		errUnmarshal := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-		if errUnmarshal != nil {
-			return nil, errUnmarshal
+		err := UnmarshalDocument(&doc, &user)
+		if err != nil {
+			return nil, err
 		}
 
 		users = append(users, user)
@@ -54,25 +70,54 @@ func (s *Service) ListUsers() ([]User, error) {
 	return users, nil
 }
 
-func (s *Service) GetUser(userID string) (*User, error) {
-	var user User
-	doc, err := s.Coll.Get(userID)
-	if err != nil {
-		return nil, errors.New("user '" + userID + "' not found")
-	}
-
-	unmarshalErr := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
-	}
-
-	return &user, nil
-}
-
 func (s *Service) DeleteUser(userID string) error {
-	err := s.Coll.Delete(userID)
+	err := s.coll.Delete(userID)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func MarshalDocument(input any) (*documentstore.Document, error) {
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return nil, errors.New("failed to marshal user")
+	}
+
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal(raw, &rawMap); err != nil {
+		return nil, errors.New("failed to unmarshal user json")
+	}
+
+	fields := make(map[string]documentstore.DocumentField, len(rawMap))
+	for k, v := range rawMap {
+		fields[k] = documentstore.DocumentField{
+			Type:  documentstore.GetFieldTypeByValue(v),
+			Value: v,
+		}
+	}
+
+	doc := documentstore.Document{
+		Fields: fields,
+	}
+
+	return &doc, err
+}
+
+func UnmarshalDocument(doc *documentstore.Document, output any) error {
+	raw := make(map[string]interface{})
+	for k, v := range doc.Fields {
+		raw[k] = v.Value
+	}
+
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return errors.New("failed to marshal document")
+	}
+
+	if err := json.Unmarshal(data, output); err != nil {
+		return errors.New("failed to unmarshal document")
 	}
 
 	return nil

@@ -7,18 +7,11 @@ import (
 )
 
 func main() {
-	store := documentstore.NewStore()
-	usersColl, err := store.CreateCollection(
-		"Users",
-		&documentstore.CollectionConfig{PrimaryKey: "key"},
-	)
-
+	userService, err := users.NewService(documentstore.NewStore())
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	userService := users.Service{Coll: usersColl}
 
 	_, err = userService.CreateUser("1", "Bob")
 	if err != nil {
