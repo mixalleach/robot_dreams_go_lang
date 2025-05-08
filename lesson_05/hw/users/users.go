@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"errors"
 	"lesson05/hw/documentstore"
 )
@@ -12,40 +11,56 @@ type User struct {
 }
 
 type Service struct {
-	Coll *documentstore.Collection
+	coll *documentstore.Collection
+}
+
+func NewService(store *documentstore.Store) (*Service, error) {
+	usersColl, err := store.CreateCollection(
+		"Users",
+		&documentstore.CollectionConfig{PrimaryKey: "id"},
+	)
+
+	return &Service{coll: usersColl}, err
 }
 
 func (s *Service) CreateUser(userID string, userName string) (*User, error) {
 	doc := User{ID: userID, Name: userName}
-	marshalled, _ := json.Marshal(doc)
 
-	err := s.Coll.Put(
-		documentstore.Document{
-			Fields: map[string]documentstore.DocumentField{
-				"key": {
-					Value: doc.ID,
-				},
-				"value": {
-					Type:  documentstore.DocumentFieldTypeString,
-					Value: marshalled,
-				},
-			},
-		},
-	)
+	marshalled, err := documentstore.MarshalDocument(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.coll.Put(*marshalled)
 
 	return &doc, err
 }
 
+func (s *Service) GetUser(userID string) (*User, error) {
+	var user User
+	doc, err := s.coll.Get(userID)
+	if err != nil {
+		return nil, errors.New("user '" + userID + "' not found")
+	}
+
+	err = documentstore.UnmarshalDocument(doc, &user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (s *Service) ListUsers() ([]User, error) {
-	docs := s.Coll.List()
+	docs := s.coll.List()
 	users := make([]User, 0, len(docs))
 
 	for _, doc := range docs {
 		var user User
 
-		errUnmarshal := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-		if errUnmarshal != nil {
-			return nil, errUnmarshal
+		err := documentstore.UnmarshalDocument(&doc, &user)
+		if err != nil {
+			return nil, err
 		}
 
 		users = append(users, user)
@@ -54,23 +69,8 @@ func (s *Service) ListUsers() ([]User, error) {
 	return users, nil
 }
 
-func (s *Service) GetUser(userID string) (*User, error) {
-	var user User
-	doc, err := s.Coll.Get(userID)
-	if err != nil {
-		return nil, errors.New("user '" + userID + "' not found")
-	}
-
-	unmarshalErr := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
-	}
-
-	return &user, nil
-}
-
 func (s *Service) DeleteUser(userID string) error {
-	err := s.Coll.Delete(userID)
+	err := s.coll.Delete(userID)
 	if err != nil {
 		return err
 	}
