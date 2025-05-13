@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"errors"
 	"lesson06/hw/documentstore"
 )
@@ -18,7 +17,7 @@ type Service struct {
 func NewService(store *documentstore.Store) (*Service, error) {
 	usersColl, err := store.CreateCollection(
 		"Users",
-		&documentstore.CollectionConfig{PrimaryKey: "key"},
+		&documentstore.CollectionConfig{PrimaryKey: "id"},
 	)
 
 	return &Service{coll: usersColl}, err
@@ -26,41 +25,15 @@ func NewService(store *documentstore.Store) (*Service, error) {
 
 func (s *Service) CreateUser(userID string, userName string) (*User, error) {
 	doc := User{ID: userID, Name: userName}
-	marshalled, _ := json.Marshal(doc)
 
-	err := s.coll.Put(
-		documentstore.Document{
-			Fields: map[string]documentstore.DocumentField{
-				"key": {
-					Value: doc.ID,
-				},
-				"value": {
-					Type:  documentstore.DocumentFieldTypeString,
-					Value: marshalled,
-				},
-			},
-		},
-	)
-
-	return &doc, err
-}
-
-func (s *Service) ListUsers() ([]User, error) {
-	docs := s.coll.List()
-	users := make([]User, 0, len(docs))
-
-	for _, doc := range docs {
-		var user User
-
-		errUnmarshal := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-		if errUnmarshal != nil {
-			return nil, errUnmarshal
-		}
-
-		users = append(users, user)
+	marshalled, err := documentstore.MarshalDocument(doc)
+	if err != nil {
+		return nil, err
 	}
 
-	return users, nil
+	err = s.coll.Put(*marshalled)
+
+	return &doc, err
 }
 
 func (s *Service) GetUser(userID string) (*User, error) {
@@ -70,12 +43,30 @@ func (s *Service) GetUser(userID string) (*User, error) {
 		return nil, errors.New("user '" + userID + "' not found")
 	}
 
-	unmarshalErr := json.Unmarshal(doc.Fields["value"].Value.([]byte), &user)
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
+	err = documentstore.UnmarshalDocument(doc, &user)
+	if err != nil {
+		return nil, err
 	}
 
 	return &user, nil
+}
+
+func (s *Service) ListUsers() ([]User, error) {
+	docs := s.coll.List()
+	users := make([]User, 0, len(docs))
+
+	for _, doc := range docs {
+		var user User
+
+		err := documentstore.UnmarshalDocument(&doc, &user)
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }
 
 func (s *Service) DeleteUser(userID string) error {

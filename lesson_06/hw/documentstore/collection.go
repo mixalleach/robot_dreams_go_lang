@@ -2,12 +2,14 @@ package documentstore
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 )
 
 type Collection struct {
 	Name      string               `json:"name"`
-	documents map[string]*Document `json:"documents"`
-	cfg       CollectionConfig     `json:"config"`
+	Documents map[string]*Document `json:"documents"`
+	Cfg       CollectionConfig     `json:"cfg"`
 }
 
 type CollectionConfig struct {
@@ -15,7 +17,7 @@ type CollectionConfig struct {
 }
 
 func (s *Collection) Put(doc Document) error {
-	key, ok := doc.Fields[s.cfg.PrimaryKey]
+	key, ok := doc.Fields[s.Cfg.PrimaryKey]
 	if !ok {
 		return errors.New("field 'key' does not exist")
 	}
@@ -29,13 +31,15 @@ func (s *Collection) Put(doc Document) error {
 		return errors.New("field 'key' is empty string")
 	}
 
-	s.documents[k] = &doc
+	s.Documents[k] = &doc
+
+	slog.Default().Info(fmt.Sprintf("Document '%s' added to collection '%s'\n", k, s.Name))
 
 	return nil
 }
 
 func (s *Collection) Get(key string) (*Document, error) {
-	doc, ok := s.documents[key]
+	doc, ok := s.Documents[key]
 	if !ok {
 		return nil, errors.New("document '" + key + "' not found")
 	}
@@ -44,32 +48,24 @@ func (s *Collection) Get(key string) (*Document, error) {
 }
 
 func (s *Collection) Delete(key string) error {
-	_, ok := s.documents[key]
+	_, ok := s.Documents[key]
 	if !ok {
 		return errors.New("document '" + key + "' not found")
 	}
 
-	delete(s.documents, key)
+	delete(s.Documents, key)
+
+	slog.Default().Info(fmt.Sprintf("Document '%s' deleted from collection '%s'\n", key, s.Name))
 
 	return nil
 }
 
 func (s *Collection) List() []Document {
-	documents := make([]Document, 0, len(s.documents))
+	documents := make([]Document, 0, len(s.Documents))
 
-	for _, doc := range s.documents {
+	for _, doc := range s.Documents {
 		documents = append(documents, *doc)
 	}
 
 	return documents
 }
-
-//func (s *Collection) Dump() ([]byte, error) {
-//	var sb strings.Builder
-//
-//	for _, doc := range s.documents {
-//		sb.WriteString(string(doc))
-//	}
-//
-//	return []byte(sb.String()), nil
-//}

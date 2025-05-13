@@ -1,12 +1,16 @@
 package documentstore
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
+	"os"
 )
 
 type Store struct {
-	Collection map[string]*Collection `json:"collections"`
+	Collections map[string]*Collection `json:"collections"`
 }
 
 func NewStore() *Store {
@@ -14,51 +18,57 @@ func NewStore() *Store {
 }
 
 func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (*Collection, error) {
-	if _, ok := s.Collection[name]; ok {
-		return nil, errors.New("Collection '" + name + "' already exists")
+	if _, ok := s.Collections[name]; ok {
+		return nil, errors.New("collection '" + name + "' already exists")
 	}
 
 	newCollection := Collection{
 		Name:      name,
-		documents: make(map[string]*Document),
-		cfg:       *cfg,
+		Documents: make(map[string]*Document),
+		Cfg:       *cfg,
 	}
 
-	s.Collection[name] = &newCollection
+	s.Collections[name] = &newCollection
+
+	slog.Default().Info(fmt.Sprintf("Collection '%s' created\n", name))
 
 	return &newCollection, nil
 }
 
 func (s *Store) GetCollection(name string) (*Collection, error) {
-	collection, ok := s.Collection[name]
+	collection, ok := s.Collections[name]
 	if !ok {
-		return nil, errors.New("Collection '" + name + "' not found")
+		return nil, errors.New("collection '" + name + "' not found")
 	}
 
 	return collection, nil
 }
 
 func (s *Store) DeleteCollection(name string) (bool, error) {
-	_, ok := s.Collection[name]
+	_, ok := s.Collections[name]
 	if !ok {
-		return false, errors.New("Collection '" + name + "' not found")
+		return false, errors.New("collection '" + name + "' not found")
 	}
 
-	delete(s.Collection, name)
+	delete(s.Collections, name)
+
+	slog.Default().Info(fmt.Sprintf("Collection '%s' deleted\n", name))
 
 	return true, nil
 }
 
 func NewStoreFromDump(dump []byte) (*Store, error) {
-	// Функція повинна створити та проініціалізувати новий `Store`
-	// зі всіма колекціями да даними з вхідного дампу.
+	var store Store
 
-	return &Store{}, nil
+	if err := json.Unmarshal(dump, &store); err != nil {
+		return nil, err
+	}
+
+	return &store, nil
 }
 
 func (s *Store) Dump() ([]byte, error) {
-	// Методи повинен віддати дамп нашого стору в який включені дані про колекції та документ
-	data, err := json.MarshalIndent(s, "", "  ")
+	data, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
@@ -66,16 +76,38 @@ func (s *Store) Dump() ([]byte, error) {
 	return data, nil
 }
 
-// Значення яке повертає метод `store.Dump()` має без помилок оброблятись функцією `NewStoreFromDump`
-
 func NewStoreFromFile(filename string) (*Store, error) {
-	// Робить те ж саме що і функція `NewStoreFromDump`, але сам дамп має діставатись з файлу
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 
-	return &Store{}, nil
+	store, err := NewStoreFromDump(data)
+
+	return store, nil
 }
 
 func (s *Store) DumpToFile(filename string) error {
-	// Робить те ж саме що і метод  `Dump`, але записує у файл замість того щоб повертати сам дамп
+	dump, err := s.Dump()
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	writer := bufio.NewWriter(file)
+	_, err = writer.Write(dump)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
