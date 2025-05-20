@@ -7,9 +7,9 @@ import (
 )
 
 type Collection struct {
-	Name      string               `json:"name"`
-	Documents map[string]*Document `json:"documents"`
-	Cfg       CollectionConfig     `json:"cfg"`
+	name      string
+	documents map[string]*Document
+	cfg       CollectionConfig
 }
 
 type CollectionConfig struct {
@@ -17,7 +17,7 @@ type CollectionConfig struct {
 }
 
 func (s *Collection) Put(doc Document) error {
-	key, ok := doc.Fields[s.Cfg.PrimaryKey]
+	key, ok := doc.Fields[s.cfg.PrimaryKey]
 	if !ok {
 		return errors.New("field 'key' does not exist")
 	}
@@ -31,15 +31,15 @@ func (s *Collection) Put(doc Document) error {
 		return errors.New("field 'key' is empty string")
 	}
 
-	s.Documents[k] = &doc
+	s.documents[k] = &doc
 
-	slog.Default().Info(fmt.Sprintf("Document '%s' added to collection '%s'\n", k, s.Name))
+	slog.Default().Info(fmt.Sprintf("Document '%s' added to collection '%s'\n", k, s.name))
 
 	return nil
 }
 
 func (s *Collection) Get(key string) (*Document, error) {
-	doc, ok := s.Documents[key]
+	doc, ok := s.documents[key]
 	if !ok {
 		return nil, errors.New("document '" + key + "' not found")
 	}
@@ -48,22 +48,22 @@ func (s *Collection) Get(key string) (*Document, error) {
 }
 
 func (s *Collection) Delete(key string) error {
-	_, ok := s.Documents[key]
+	_, ok := s.documents[key]
 	if !ok {
 		return errors.New("document '" + key + "' not found")
 	}
 
-	delete(s.Documents, key)
+	delete(s.documents, key)
 
-	slog.Default().Info(fmt.Sprintf("Document '%s' deleted from collection '%s'\n", key, s.Name))
+	slog.Default().Info(fmt.Sprintf("Document '%s' deleted from collection '%s'\n", key, s.name))
 
 	return nil
 }
 
 func (s *Collection) List() []Document {
-	documents := make([]Document, 0, len(s.Documents))
+	documents := make([]Document, 0, len(s.documents))
 
-	for _, doc := range s.Documents {
+	for _, doc := range s.documents {
 		documents = append(documents, *doc)
 	}
 

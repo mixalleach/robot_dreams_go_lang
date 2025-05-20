@@ -1,1 +1,1 @@
-{"collections":{"Users":{"name":"Users","documents":{"1":{"Fields":{"id":{"Type":"string","Value":"1"},"name":{"Type":"string","Value":"Bob"}}},"2":{"Fields":{"id":{"Type":"string","Value":"2"},"name":{"Type":"string","Value":"Ned"}}}},"cfg":{"PrimaryKey":"id"}}}}
+{"collections":[{"name":"Users","documents":[{"fields":{"id":{"Type":"string","Value":"1"},"name":{"Type":"string","Value":"Bob"}}},{"fields":{"id":{"Type":"string","Value":"2"},"name":{"Type":"string","Value":"Ned"}}}],"cfg":{"PrimaryKey":"id"}}]}

@@ -10,7 +10,21 @@ import (
 )
 
 type Store struct {
-	Collections map[string]*Collection `json:"collections"`
+	collections map[string]*Collection
+}
+
+type dumpDocument struct {
+	Fields map[string]DocumentField `json:"fields"`
+}
+
+type dumpCollection struct {
+	Name      string           `json:"name"`
+	Documents []dumpDocument   `json:"documents"`
+	Cfg       CollectionConfig `json:"cfg"`
+}
+
+type dumpStore struct {
+	Collections []dumpCollection `json:"collections"`
 }
 
 func NewStore() *Store {
@@ -18,17 +32,17 @@ func NewStore() *Store {
 }
 
 func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (*Collection, error) {
-	if _, ok := s.Collections[name]; ok {
+	if _, ok := s.collections[name]; ok {
 		return nil, errors.New("collection '" + name + "' already exists")
 	}
 
 	newCollection := Collection{
-		Name:      name,
-		Documents: make(map[string]*Document),
-		Cfg:       *cfg,
+		name:      name,
+		documents: make(map[string]*Document),
+		cfg:       *cfg,
 	}
 
-	s.Collections[name] = &newCollection
+	s.collections[name] = &newCollection
 
 	slog.Default().Info(fmt.Sprintf("Collection '%s' created\n", name))
 
@@ -36,7 +50,7 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (*Collectio
 }
 
 func (s *Store) GetCollection(name string) (*Collection, error) {
-	collection, ok := s.Collections[name]
+	collection, ok := s.collections[name]
 	if !ok {
 		return nil, errors.New("collection '" + name + "' not found")
 	}
@@ -45,12 +59,12 @@ func (s *Store) GetCollection(name string) (*Collection, error) {
 }
 
 func (s *Store) DeleteCollection(name string) (bool, error) {
-	_, ok := s.Collections[name]
+	_, ok := s.collections[name]
 	if !ok {
 		return false, errors.New("collection '" + name + "' not found")
 	}
 
-	delete(s.Collections, name)
+	delete(s.collections, name)
 
 	slog.Default().Info(fmt.Sprintf("Collection '%s' deleted\n", name))
 
@@ -58,17 +72,53 @@ func (s *Store) DeleteCollection(name string) (bool, error) {
 }
 
 func NewStoreFromDump(dump []byte) (*Store, error) {
-	var store Store
+	var tmpStore dumpStore
+	store := NewStore()
 
-	if err := json.Unmarshal(dump, &store); err != nil {
+	if err := json.Unmarshal(dump, &tmpStore); err != nil {
 		return nil, err
 	}
 
-	return &store, nil
+	for _, tmpCollection := range tmpStore.Collections {
+		newCollection, err := store.CreateCollection(tmpCollection.Name, &tmpCollection.Cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, tmpDocument := range tmpCollection.Documents {
+			doc := Document{
+				Fields: tmpDocument.Fields,
+			}
+			newCollection.Put(doc)
+		}
+	}
+
+	return store, nil
 }
 
 func (s *Store) Dump() ([]byte, error) {
-	data, err := json.Marshal(s)
+	tmpStore := dumpStore{
+		Collections: make([]dumpCollection, 0, len(s.collections)),
+	}
+
+	for _, collection := range s.collections {
+		tmpCollection := dumpCollection{
+			Name:      collection.name,
+			Documents: make([]dumpDocument, 0, len(collection.documents)),
+			Cfg:       collection.cfg,
+		}
+
+		for _, doc := range collection.documents {
+			tmpDocument := dumpDocument{
+				Fields: doc.Fields,
+			}
+			tmpCollection.Documents = append(tmpCollection.Documents, tmpDocument)
+		}
+
+		tmpStore.Collections = append(tmpStore.Collections, tmpCollection)
+	}
+
+	data, err := json.Marshal(tmpStore)
 	if err != nil {
 		return nil, err
 	}

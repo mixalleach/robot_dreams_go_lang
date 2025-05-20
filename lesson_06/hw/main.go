@@ -43,10 +43,15 @@ func main() {
 		return
 	}
 
-	cloned, err := documentstore.NewStoreFromFile("dump.json")
+	clonedStore, err := documentstore.NewStoreFromFile("dump.json")
 	if err != nil {
 		fmt.Printf("error while cloning store: %s\n", err)
 	}
 
-	fmt.Printf("clonned users collection list: %+v\n", cloned.Collections["Users"].List())
+	clonedCollection, err := clonedStore.GetCollection("Users")
+	if err != nil {
+		fmt.Printf("error while cloning collection: %s\n", err)
+	}
+
+	fmt.Printf("clonned users collection list: %+v\n", clonedCollection.List())
 }
